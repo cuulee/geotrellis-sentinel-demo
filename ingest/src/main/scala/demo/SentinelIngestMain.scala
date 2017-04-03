@@ -47,8 +47,12 @@ object SentinelIngestMain extends App {
       .set("spark.kryo.registrator", "geotrellis.spark.io.kryo.KryoRegistrator")
   implicit val sc = new SparkContext(conf)
 
+<<<<<<< HEAD
   val source = sc.hadoopTemporalGeoTiffRDD("/home/kkaralas/Documents/vboxshare/t34tel/S2A_MSIL2A_20161210T092402_N0204_R093_T34TEL_20161210T092356_NDVI.tif")
   val sources = sc.hadoopTemporalGeoTiffRDD("/home/kkaralas/Documents/vboxshare/t34tel/")
+=======
+  val source = sc.hadoopTemporalGeoTiffRDD("/home/kkaralas/Documents/shared/data/t34tel/S2A_MSIL2A_20161210T092402_N0204_R093_T34TEL_20161210T092356_NDVI.tif")
+>>>>>>> c90c51d777bc4afd4192371f7b94c2ee3c2c4b22
 
   val layoutScheme = ZoomedLayoutScheme(WebMercator)
 
@@ -86,10 +90,18 @@ object SentinelIngestMain extends App {
 
   /* Define wide enough keyspace for layer */
 
+<<<<<<< HEAD
+=======
+  // source to a folder with all tiffs
+  val sources: RDD[(TemporalProjectedExtent, Tile)] = sc.hadoopTemporalGeoTiffRDD("/home/kkaralas/Documents/shared/data/t34tel/")
+  // collected metadata
+  val (_, mdall) = TileLayerMetadata.fromRdd[TemporalProjectedExtent, Tile, SpaceTimeKey](sources, FloatingLayoutScheme(256))
+>>>>>>> c90c51d777bc4afd4192371f7b94c2ee3c2c4b22
   // key index
   val keyIndex = ZCurveKeyIndexMethod.byDay()
 
   // entire data set key bounds
+<<<<<<< HEAD
   val KeyBounds(minKeySpatial, maxKeySpatial) = rmd.bounds match {
     case kb: KeyBounds[SpaceTimeKey] => kb
     case _ => sys.error("Empty bounds")
@@ -97,6 +109,12 @@ object SentinelIngestMain extends App {
 
   // We increased in this case date time range, but you can modify anything in your “preset” key bounds
   val updatedKeyIndex = keyIndex.createIndex(rmdall.bounds match {
+=======
+  val KeyBounds(minKeySpatial, maxKeySpatial) = KeyBounds(reprojected.metadata.mapTransform(extent))
+
+  // We increased in this case date time range, but you can modify anything in your “preset” key bounds
+  val updatedKeyIndex = keyIndex.createIndex(reprojected.metadata.bounds match {
+>>>>>>> c90c51d777bc4afd4192371f7b94c2ee3c2c4b22
     case kb: KeyBounds[SpaceTimeKey] => KeyBounds(
       kb.minKey.copy(
         col = minKeySpatial.col,
