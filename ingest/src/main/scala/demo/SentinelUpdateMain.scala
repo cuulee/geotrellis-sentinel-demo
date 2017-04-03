@@ -51,9 +51,9 @@ object SentinelUpdateMain extends App {
       .set("spark.kryo.registrator", "geotrellis.spark.io.kryo.KryoRegistrator")
   implicit val sc = new SparkContext(conf)
 
-  println("\n\nSentinelUpdateMain")
+  println("\nSentinelUpdateMain\n")
 
-  val source = sc.hadoopTemporalGeoTiffRDD("/home/kkaralas/Documents/vboxshare/t34tel/test2.tif")
+  val source = sc.hadoopTemporalGeoTiffRDD("/home/kkaralas/Documents/vboxshare/t34tel/S2A_MSIL2A_20161223T093412_N0204_R136_T34TEL_20161223T093656_NDVI.tif")
 
   val (_, md) = TileLayerMetadata.fromRdd[TemporalProjectedExtent, Tile, SpaceTimeKey](source, FloatingLayoutScheme(256))
 
@@ -64,10 +64,7 @@ object SentinelUpdateMain extends App {
 
   // Use the same Cassandra instance used for the first ingest
   val attributeStore = CassandraAttributeStore(instance)
-  //val attributeStore = FileAttributeStore("catalog")
-
   val updater = CassandraLayerUpdater(attributeStore)
-  //val updater = FileLayerUpdater("catalog")
 
   // We'll be tiling the images using a zoomed layout scheme in the web mercator format
   val layoutScheme = ZoomedLayoutScheme(WebMercator, tileSize = 256)
@@ -76,14 +73,20 @@ object SentinelUpdateMain extends App {
   Pyramid.upLevels(reprojected, layoutScheme, zoom, 0, NearestNeighbor) { (rdd, z) =>
     val layerId = LayerId(layerName, z)
 
-    updater.update[SpaceTimeKey, Tile, TileLayerMetadata[SpaceTimeKey]](layerId, reprojected)
+    val keySpace = attributeStore.readKeyIndex[SpaceTimeKey](layerId).keyBounds
+    val kb = rdd.metadata.bounds match { case kb: KeyBounds[SpaceTimeKey] => kb }
+
+    println(s"\nPrinting bounds in Update...")
+    println(s"keySpace ($layerId): ${keySpace}")
+    println(s"kb ($layerId): ${kb}")
+    println(s"keySpace contains kb: ${keySpace contains kb}\n")
+
+    updater.update[SpaceTimeKey, Tile, TileLayerMetadata[SpaceTimeKey]](layerId, rdd)
 
     if (z == 0) {
       val id = LayerId(layerName, 0)
+
       val times = attributeStore.read[Array[Long]](id, "times") // read times
-
-      println(s"\n\n$times")
-
       attributeStore.delete(id, "times") // delete it
       attributeStore.write(id, "times", // write new on the zero zoom level
         (times ++ rdd
@@ -95,7 +98,7 @@ object SentinelUpdateMain extends App {
       val extent = attributeStore.read[Extent](id, "extent")
       attributeStore.delete(id, "extent")
       attributeStore.write(id, "extent",
-        (md.extent.combine(extent)))
+        (extent.combine(md.extent)))
     }
   }
 
