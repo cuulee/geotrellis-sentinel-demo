@@ -18,10 +18,11 @@ import geotrellis.vector.io._
 import geotrellis.vector.io.json._
 import org.apache.spark.SparkContext
 import spray.json._
-
 import java.lang.management.ManagementFactory
 import java.time.format.DateTimeFormatter
-import java.time.{ZonedDateTime, ZoneOffset}
+import java.time.{ZoneOffset, ZonedDateTime}
+
+import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -213,14 +214,24 @@ class Router(readerSet: ReaderSet, sc: SparkContext) extends Directives with Akk
                   println(s"Extent: ${extent}")
                   println(s"WKT: ${rawGeometry}\n")
 
+                  val dateFrom = "2016-12-09T12:12:12-0400"
+                  val dateTo = "2016-12-31T12:12:12-0400"
+
+                  val rdd = catalog
+                    .query[SpaceTimeKey, Tile, TileLayerMetadata[SpaceTimeKey]](layerId)
+                    .where(Between(ZonedDateTime.parse(dateFrom, dateTimeFormat), ZonedDateTime.parse(dateTo, dateTimeFormat)))
+                    .where(Intersects(extent))
+                    .result
+
+                  val timeSeriesAnswer = ContextRDD(rdd.mapValues({ v => (v) }), rdd.metadata).polygonalMean(geometry)
+                  val imgNum = ContextRDD(rdd.mapValues({ v => (v) }), rdd.metadata).count()
+
                   val rdd1 = catalog
                     .query[SpaceTimeKey, Tile, TileLayerMetadata[SpaceTimeKey]](layerId)
                     .where(At(ZonedDateTime.parse(time, dateTimeFormat)))
                     .where(Intersects(extent))
                     .result
                   val answer1 = ContextRDD(rdd1.mapValues({ v => (v) }), rdd1.metadata).polygonalMean(geometry)
-
-                  println(s"\nAnswer1: ${answer1}\n")
 
                   val answer2: Double = otherTime match {
                     case None => 0.0
@@ -234,11 +245,12 @@ class Router(readerSet: ReaderSet, sc: SparkContext) extends Directives with Akk
                       ContextRDD(rdd2.mapValues({ v => fn(v) }), rdd2.metadata).polygonalMean(geometry)
                   }
 
-                  println(s"\nAnswer2: ${answer2}\n")
-
                   val answer = answer1 - answer2
 
-                  println(s"\nAnswer: ${answer}\n")
+                  println(s"\ntimeSeriesAnswer: ${timeSeriesAnswer} (for $imgNum images)")
+                  println(s"\nAnswer1: ${answer1}")
+                  println(s"\nAnswer2: ${answer2}")
+                  println(s"\nAnswer: ${answer}")
 
                   JsObject("answer" -> JsNumber(answer))
                 }
@@ -267,6 +279,14 @@ class Router(readerSet: ReaderSet, sc: SparkContext) extends Directives with Akk
               val layerId = LayerId(layer, zoom)
               val point = Point(lng.toDouble, lat.toDouble).reproject(LatLng, WebMercator)
 
+              println(s"\nLayer: $layer")
+              println(s"Op: $op")
+              println(s"Lat: $lat")
+              println(s"Lng: $lng")
+              println(s"ZoomLevel: $zoomLevel")
+              println(s"LayerId: $layerId")
+              println(s"Point: $point")
+
               // Wasteful but safe
               val fn = op match {
                 case "ndvi" => NDVI.apply(_)
@@ -274,24 +294,28 @@ class Router(readerSet: ReaderSet, sc: SparkContext) extends Directives with Akk
                 case _ => sys.error(s"UNKNOWN OPERATION")
               }
 
-              val rdd = catalog.query[SpaceTimeKey, MultibandTile, TileLayerMetadata[SpaceTimeKey]](layerId)
+              val rdd = catalog.query[SpaceTimeKey, Tile, TileLayerMetadata[SpaceTimeKey]](layerId)
                 .where(Intersects(point.envelope))
                 .result
 
               val mt = rdd.metadata.mapTransform
+
+              println(s"RDD md: $mt")
 
               val answer = rdd
                 .map { case (k, tile) =>
                   // reconstruct tile raster extent so we can map the point to the tile cell
                   val re = RasterExtent(mt(k), tile.cols, tile.rows)
                   val (tileCol, tileRow) = re.mapToGrid(point)
-                  val ret = fn(tile).getDouble(tileCol, tileRow)
+                  val ret = tile.getDouble(tileCol, tileRow)
                   println(s"$point equals $ret at ($tileCol, $tileRow) in tile $re ")
                   (k.time, ret)
                 }
                 .collect
                 .filterNot(_._2.isNaN)
                 .toJson
+
+              println(s"\nAnswer: ${answer}\n")
 
               JsObject("answer" -> answer)
             }
