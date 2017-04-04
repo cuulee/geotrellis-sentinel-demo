@@ -122,13 +122,14 @@ class Router(readerSet: ReaderSet, sc: SparkContext) extends Directives with Akk
       parameters('time, 'operation ?) { (timeString, operationOpt) =>
         val time = ZonedDateTime.parse(timeString, dateTimeFormat)
 
-        println("\nI am in!!!")
-        println(layer, zoom, x, y, time)
+        println("\nIn tilesRoute...\n")
+        println(s"layer: ${layer}")
+        println(s"zoom: ${zoom}")
+        println(s"X: $x, Y: $y")
+        println(s"Time: $time")
 
         complete {
           Future {
-            println("\ntilesRoute")
-
             val tileOpt =
               readerSet.readSinglebandTile(layer, zoom, x, y, time)
               //readerSet.readMultibandTile(layer, zoom, x, y, time)
@@ -166,7 +167,7 @@ class Router(readerSet: ReaderSet, sc: SparkContext) extends Directives with Akk
     }
 
   def polygonalMeanRoute = {
-    println("\npolygonalMeanRoute")
+    println("\nIn polygonalMeanRoute...\n")
     import spray.json.DefaultJsonProtocol._
 
     pathPrefix(Segment / Segment) { (layer, op) =>
@@ -195,35 +196,31 @@ class Router(readerSet: ReaderSet, sc: SparkContext) extends Directives with Akk
                   }
                   val extent = geometry.envelope
 
-                  println(op)
-                  println(extent)
-
                   val fn = op match {
                     case "ndvi" => NDVI.apply(_)
                     case "ndwi" => NDWI.apply(_)
                     case _ => sys.error(s"UNKNOWN OPERATION")
                   }
 
+                  println(s"\nLayer: ${layer}")
+                  println(s"Op: ${op}")
 
+                  println(s"DateTimeFormat: ${dateTimeFormat}")
+                  println(s"Time: ${time}")
+                  println(s"OtherTime: ${otherTime}")
+                  println(s"ZoomLevel: ${zoomLevel}")
 
-                  println("before rdd1")
-                  println(rawGeometry)
+                  println(s"Extent: ${extent}")
+                  println(s"WKT: ${rawGeometry}\n")
 
                   val rdd1 = catalog
                     .query[SpaceTimeKey, Tile, TileLayerMetadata[SpaceTimeKey]](layerId)
                     .where(At(ZonedDateTime.parse(time, dateTimeFormat)))
                     .where(Intersects(extent))
                     .result
-
-                  println("yoye")
-
-
                   val answer1 = ContextRDD(rdd1.mapValues({ v => (v) }), rdd1.metadata).polygonalMean(geometry)
 
-
-                  println(answer1)
-
-                  println("before rdd2")
+                  println(s"\nAnswer1: ${answer1}\n")
 
                   val answer2: Double = otherTime match {
                     case None => 0.0
@@ -237,7 +234,11 @@ class Router(readerSet: ReaderSet, sc: SparkContext) extends Directives with Akk
                       ContextRDD(rdd2.mapValues({ v => fn(v) }), rdd2.metadata).polygonalMean(geometry)
                   }
 
+                  println(s"\nAnswer2: ${answer2}\n")
+
                   val answer = answer1 - answer2
+
+                  println(s"\nAnswer: ${answer}\n")
 
                   JsObject("answer" -> JsNumber(answer))
                 }
@@ -250,7 +251,7 @@ class Router(readerSet: ReaderSet, sc: SparkContext) extends Directives with Akk
   }
 
   def timeseriesRoute = {
-    println("\ntimeseriesRoute")
+    println("\nIn timeseriesRoute...\n")
     import spray.json.DefaultJsonProtocol._
 
     pathPrefix(Segment / Segment) { (layer, op) =>

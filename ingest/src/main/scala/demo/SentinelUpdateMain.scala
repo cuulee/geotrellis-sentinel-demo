@@ -67,9 +67,16 @@ object SentinelUpdateMain extends App {
 
   val files = getListOfFiles("/home/kkaralas/Documents/shared/data/test2")
 
-  files.foreach { file =>
-    implicit val sc = new SparkContext(conf)
+  implicit val sc = new SparkContext(conf)
 
+  // Use the same Cassandra instance used for the first ingest
+  val attributeStore = CassandraAttributeStore(instance)
+  val updater = CassandraLayerUpdater(attributeStore)
+
+  // We'll be tiling the images using a zoomed layout scheme in the web mercator format
+  val layoutScheme = ZoomedLayoutScheme(WebMercator, tileSize = 256)
+
+  files.foreach { file =>
     println(s"\nUpdating layer with image: ${file.toString} ...\n")
 
     val source = sc.hadoopTemporalGeoTiffRDD(file.toString)
@@ -79,13 +86,6 @@ object SentinelUpdateMain extends App {
     val tilerOptions = Tiler.Options(resampleMethod = NearestNeighbor)
     val tiled = ContextRDD(source.tileToLayout[SpaceTimeKey](md, tilerOptions), md)
     val (zoom, reprojected) = tiled.reproject(WebMercator, ZoomedLayoutScheme(WebMercator), NearestNeighbor)
-
-    // Use the same Cassandra instance used for the first ingest
-    val attributeStore = CassandraAttributeStore(instance)
-    val updater = CassandraLayerUpdater(attributeStore)
-
-    // We'll be tiling the images using a zoomed layout scheme in the web mercator format
-    val layoutScheme = ZoomedLayoutScheme(WebMercator, tileSize = 256)
 
     // Pyramiding up the zoom levels, update our tiles out to Cassandra
     Pyramid.upLevels(reprojected, layoutScheme, zoom, 0, NearestNeighbor) { (rdd, z) =>
@@ -121,8 +121,9 @@ object SentinelUpdateMain extends App {
       }
     }
 
-    sc.stop()
   }
+
+  sc.stop()
 }
 
 
