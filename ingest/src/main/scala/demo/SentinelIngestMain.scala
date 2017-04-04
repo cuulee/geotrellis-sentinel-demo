@@ -52,11 +52,12 @@ object SentinelIngestMain extends App {
 
   val layoutScheme = ZoomedLayoutScheme(WebMercator)
 
+  // read metadata
   val (_, md) = TileLayerMetadata.fromRdd[TemporalProjectedExtent, Tile, SpaceTimeKey](source, FloatingLayoutScheme(256))
-  // collected metadata
+  // read metadata of all images
   val (_, mdall) = TileLayerMetadata.fromRdd[TemporalProjectedExtent, Tile, SpaceTimeKey](sources, layoutScheme)
 
-  /*****/
+  /* Reproject metadata of all images */
   val rmdall = {
     val ld = mdall.layout.copy(extent = mdall.layoutExtent.reproject(Proj4Transform(md.crs, WebMercator)))
     val e = mdall.extent.reproject(Proj4Transform(md.crs, WebMercator))
@@ -64,13 +65,13 @@ object SentinelIngestMain extends App {
 
     TileLayerMetadata(mdall.cellType, ld, e, md.crs, kb)
   }
-  /*****/
 
   // Keep the same number of partitions after tiling
   val tilerOptions = Tiler.Options(resampleMethod = NearestNeighbor)
   val tiled = ContextRDD(source.tileToLayout[SpaceTimeKey](md, tilerOptions), md)
   val (zoom, reprojected) = tiled.reproject(WebMercator, layoutScheme, NearestNeighbor)
 
+  // Reproject metadata
   val rmd = reprojected.metadata
 
   println("\nPrinting bounds in Ingest...")
@@ -91,7 +92,7 @@ object SentinelIngestMain extends App {
   val keyIndex = ZCurveKeyIndexMethod.byDay()
 
   // entire data set key bounds
-  val KeyBounds(minKeySpatial, maxKeySpatial) = rmd.bounds match {
+  val KeyBounds(minKeySpatial, maxKeySpatial) = rmdall.bounds match {
     case kb: KeyBounds[SpaceTimeKey] => kb
     case _ => sys.error("Empty bounds")
   }
@@ -100,13 +101,13 @@ object SentinelIngestMain extends App {
   val updatedKeyIndex = keyIndex.createIndex(rmd.bounds match {
     case kb: KeyBounds[SpaceTimeKey] => KeyBounds(
       kb.minKey.copy(
-        col = minKeySpatial.col,
-        row = minKeySpatial.row,
+        col = 0,
+        row = 0,
         instant = DateTime.parse("2015-01-01").getMillis
       ),
       kb.maxKey.copy(
-        col = maxKeySpatial.col,
-        row = maxKeySpatial.row,
+        col = Int.MaxValue,
+        row = Int.MaxValue,
         instant = DateTime.parse("2020-01-01").getMillis
       )
     )

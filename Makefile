@@ -56,7 +56,7 @@ local-ingest: ${INGEST_ASSEMBLY}
 	--executor-cores 1 \
 	--conf spark.yarn.executor.memoryOverhead=1g \
 	--conf spark.yarn.driver.memoryOverhead=1g \
-	--conf spark.network.timeout=240s \
+	--conf spark.network.timeout=480s \
 	--conf spark.driver.maxResultSize=5g \
 	--conf spark.driver.extraJavaOptions="-XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=70 -XX:MaxHeapFreeRatio=70" \
 	--driver-java-options "-XX:+UseCompressedOops -XX:MaxPermSize=2g -d64 -Xms1g" \
@@ -72,7 +72,7 @@ local-update: ${INGEST_ASSEMBLY}
 	--executor-cores 1 \
 	--conf spark.yarn.executor.memoryOverhead=1g \
 	--conf spark.yarn.driver.memoryOverhead=1g \
-	--conf spark.network.timeout=240s \
+	--conf spark.network.timeout=480s \
 	--conf spark.driver.maxResultSize=5g \
 	--conf spark.driver.extraJavaOptions="-XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=70 -XX:MaxHeapFreeRatio=70" \
 	--driver-java-options "-XX:+UseCompressedOops -XX:MaxPermSize=2g -d64 -Xms1g" \
