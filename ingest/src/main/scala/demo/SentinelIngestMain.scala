@@ -47,27 +47,24 @@ object SentinelIngestMain extends App {
       .set("spark.kryo.registrator", "geotrellis.spark.io.kryo.KryoRegistrator")
   implicit val sc = new SparkContext(conf)
 
-<<<<<<< HEAD
-  val source = sc.hadoopTemporalGeoTiffRDD("/home/kkaralas/Documents/vboxshare/t34tel/S2A_MSIL2A_20161210T092402_N0204_R093_T34TEL_20161210T092356_NDVI.tif")
-  val sources = sc.hadoopTemporalGeoTiffRDD("/home/kkaralas/Documents/vboxshare/t34tel/")
-=======
   val source = sc.hadoopTemporalGeoTiffRDD("/home/kkaralas/Documents/shared/data/t34tel/S2A_MSIL2A_20161210T092402_N0204_R093_T34TEL_20161210T092356_NDVI.tif")
->>>>>>> c90c51d777bc4afd4192371f7b94c2ee3c2c4b22
+  val sources = sc.hadoopTemporalGeoTiffRDD("/home/kkaralas/Documents/shared/data/t34tel/")
 
   val layoutScheme = ZoomedLayoutScheme(WebMercator)
 
-  // collected metadata from 1st file
   val (_, md) = TileLayerMetadata.fromRdd[TemporalProjectedExtent, Tile, SpaceTimeKey](source, FloatingLayoutScheme(256))
-  // collected metadata from all files
+  // collected metadata
   val (_, mdall) = TileLayerMetadata.fromRdd[TemporalProjectedExtent, Tile, SpaceTimeKey](sources, layoutScheme)
 
+  /*****/
   val rmdall = {
-    val ld = mdall.layout.copy(extent = mdall.layoutExtent.reproject(md.crs, WebMercator))
-    val e = mdall.extent.reproject(md.crs, WebMercator)
+    val ld = mdall.layout.copy(extent = mdall.layoutExtent.reproject(Proj4Transform(md.crs, WebMercator)))
+    val e = mdall.extent.reproject(Proj4Transform(md.crs, WebMercator))
     val kb = mdall.bounds.setSpatialBounds(KeyBounds(ld.mapTransform(e)))
 
     TileLayerMetadata(mdall.cellType, ld, e, md.crs, kb)
   }
+  /*****/
 
   // Keep the same number of partitions after tiling
   val tilerOptions = Tiler.Options(resampleMethod = NearestNeighbor)
@@ -77,7 +74,7 @@ object SentinelIngestMain extends App {
   val rmd = reprojected.metadata
 
   println("\nPrinting bounds in Ingest...")
-  println(s"zoom: ${zoom}")
+  println(s"zoom level: ${zoom}")
   println(s"rmd.bounds: ${rmd.bounds}")
   println(s"rmdall.bounds: ${rmdall.bounds}")
   println(s"mdall.bounds: ${mdall.bounds}\n")
@@ -90,31 +87,17 @@ object SentinelIngestMain extends App {
 
   /* Define wide enough keyspace for layer */
 
-<<<<<<< HEAD
-=======
-  // source to a folder with all tiffs
-  val sources: RDD[(TemporalProjectedExtent, Tile)] = sc.hadoopTemporalGeoTiffRDD("/home/kkaralas/Documents/shared/data/t34tel/")
-  // collected metadata
-  val (_, mdall) = TileLayerMetadata.fromRdd[TemporalProjectedExtent, Tile, SpaceTimeKey](sources, FloatingLayoutScheme(256))
->>>>>>> c90c51d777bc4afd4192371f7b94c2ee3c2c4b22
   // key index
   val keyIndex = ZCurveKeyIndexMethod.byDay()
 
   // entire data set key bounds
-<<<<<<< HEAD
   val KeyBounds(minKeySpatial, maxKeySpatial) = rmd.bounds match {
     case kb: KeyBounds[SpaceTimeKey] => kb
     case _ => sys.error("Empty bounds")
   }
 
   // We increased in this case date time range, but you can modify anything in your “preset” key bounds
-  val updatedKeyIndex = keyIndex.createIndex(rmdall.bounds match {
-=======
-  val KeyBounds(minKeySpatial, maxKeySpatial) = KeyBounds(reprojected.metadata.mapTransform(extent))
-
-  // We increased in this case date time range, but you can modify anything in your “preset” key bounds
-  val updatedKeyIndex = keyIndex.createIndex(reprojected.metadata.bounds match {
->>>>>>> c90c51d777bc4afd4192371f7b94c2ee3c2c4b22
+  val updatedKeyIndex = keyIndex.createIndex(rmd.bounds match {
     case kb: KeyBounds[SpaceTimeKey] => KeyBounds(
       kb.minKey.copy(
         col = minKeySpatial.col,
@@ -129,6 +112,17 @@ object SentinelIngestMain extends App {
     )
     case _ => sys.error("Empty bounds")
   })
+
+  /*
+  // We increased in this case date time range, but you can modify anything in your “preset” key bounds
+  val updatedKeyIndex = keyIndex.createIndex(rmd.bounds match {
+    case kb: KeyBounds[SpaceTimeKey] => KeyBounds(
+      kb.minKey.copy(instant = DateTime.parse("2015-01-01").getMillis),
+      kb.maxKey.copy(instant = DateTime.parse("2020-01-01").getMillis)
+    )
+    case _ => sys.error("Empty bounds")
+  })
+  */
 
   // Pyramiding up the zoom levels, write our tiles out to Cassandra
   Pyramid.upLevels(reprojected, layoutScheme, zoom, 0, NearestNeighbor) { (rdd, z) =>

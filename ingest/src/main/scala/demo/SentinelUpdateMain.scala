@@ -53,11 +53,7 @@ object SentinelUpdateMain extends App {
 
   println("\nSentinelUpdateMain\n")
 
-<<<<<<< HEAD
-  val source = sc.hadoopTemporalGeoTiffRDD("/home/kkaralas/Documents/vboxshare/t34tel/S2A_MSIL2A_20161223T093412_N0204_R136_T34TEL_20161223T093656_NDVI.tif")
-=======
   val source = sc.hadoopTemporalGeoTiffRDD("/home/kkaralas/Documents/shared/data/t34tel/S2A_MSIL2A_20161213T093402_N0204_R136_T34TEL_20161213T093819_NDVI.tif")
->>>>>>> c90c51d777bc4afd4192371f7b94c2ee3c2c4b22
 
   val (_, md) = TileLayerMetadata.fromRdd[TemporalProjectedExtent, Tile, SpaceTimeKey](source, FloatingLayoutScheme(256))
 
@@ -80,19 +76,10 @@ object SentinelUpdateMain extends App {
     val keySpace = attributeStore.readKeyIndex[SpaceTimeKey](layerId).keyBounds
     val kb = rdd.metadata.bounds match { case kb: KeyBounds[SpaceTimeKey] => kb }
 
-<<<<<<< HEAD
     println(s"\nPrinting bounds in Update...")
-    println(s"keySpace ($layerId): ${keySpace}")
-    println(s"kb ($layerId): ${kb}")
+    println(s"AttributeStore keySpace ($layerId): ${keySpace}")
+    println(s"RDD kb ($layerId): ${kb}")
     println(s"keySpace contains kb: ${keySpace contains kb}\n")
-=======
-    println(s"\n\n")
-    println(s"keySpace ($layerId): ${keySpace}")
-    println(s"kb ($layerId): ${kb}")
-    println(s"metadata b ($layerId): ${md.bounds}")
-    println(s"keySpace contains kb: ${keySpace contains kb}")
-    println(s"\n\n")
->>>>>>> c90c51d777bc4afd4192371f7b94c2ee3c2c4b22
 
     updater.update[SpaceTimeKey, Tile, TileLayerMetadata[SpaceTimeKey]](layerId, rdd)
 
