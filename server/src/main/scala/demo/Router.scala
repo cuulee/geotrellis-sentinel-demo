@@ -22,6 +22,10 @@ import java.lang.management.ManagementFactory
 import java.time.format.DateTimeFormatter
 import java.time.{ZoneOffset, ZonedDateTime}
 
+import geotrellis.raster.io.geotiff.GeoTiff
+import org.apache.spark._
+import org.apache.spark.rdd._
+import org.apache.spark.rdd.RDD
 import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.concurrent.Future
@@ -68,12 +72,10 @@ class Router(readerSet: ReaderSet, sc: SparkContext) extends Directives with Akk
   def catalogRoute =
     cors() {
       get { // GET !
-        println("\ncatalogRoute")
         import spray.json.DefaultJsonProtocol._
         complete {
           Future {
-
-            println("asd")
+            println("\nIn catalogRoute... (GET)\n")
 
             val layerInfo =
               metadataReader.layerNamesToZooms //Map[String, Array[Int]]
@@ -90,15 +92,12 @@ class Router(readerSet: ReaderSet, sc: SparkContext) extends Directives with Akk
                     extent.reproject(crs, LatLng)
                   }
 
-
-
                   val times = attributeStore.read[Array[Long]](LayerId(name, 0), "times")
                     .map { instant =>
                       dateTimeFormat.format(ZonedDateTime.ofInstant(instant, ZoneOffset.ofHours(-4)))
                     }
                   (name, extent, times.sorted)
                 }
-
 
             JsObject(
               "layers" ->
@@ -111,10 +110,10 @@ class Router(readerSet: ReaderSet, sc: SparkContext) extends Directives with Akk
                     "isLandsat" -> JsBoolean(true)
                   )
                 }.toJson
-            )
-          }
+            ) // end JsObject
+          } // end Future
         }
-      }
+      } // end GET
     }
 
   /** Find the breaks for one layer */
@@ -219,12 +218,30 @@ class Router(readerSet: ReaderSet, sc: SparkContext) extends Directives with Akk
 
                   val rdd = catalog
                     .query[SpaceTimeKey, Tile, TileLayerMetadata[SpaceTimeKey]](layerId)
-                    .where(Between(ZonedDateTime.parse(dateFrom, dateTimeFormat), ZonedDateTime.parse(dateTo, dateTimeFormat)))
                     .where(Intersects(extent))
+                    .where(Between(ZonedDateTime.parse(dateFrom, dateTimeFormat), ZonedDateTime.parse(dateTo, dateTimeFormat)))
                     .result
 
-                  val timeSeriesAnswer = ContextRDD(rdd.mapValues({ v => (v) }), rdd.metadata).polygonalMean(geometry)
+                  val timeSeriesAnswer = ContextRDD(rdd.map({ v => (v) }), rdd.metadata).polygonalMean(geometry)
                   val imgNum = ContextRDD(rdd.mapValues({ v => (v) }), rdd.metadata).count()
+
+
+                  val mt = rdd.metadata.mapTransform
+
+                  val answer4 = rdd
+                    .map { case (k, tile) =>
+                      val re = RasterExtent(mt(k), tile.cols, tile.rows)
+                      val mn = tile.polygonalMean(extent, geometry)
+                      println(s"mean ndvi for key $k equals $mn")
+                      (k, tile)
+                    }.collect()
+
+                  //val timeSeriesAnswer2 = ContextRDD(rdd.mapValues({ v => (v) }), rdd.metadata).polygonalMean(geometry)
+                  //val timeSeriesAnswe = rdd.collect().foreach(println)
+
+                  //println(s"\ntimeSeriesAnswer: ${timeSeriesAnswe}\n")
+
+                  println(s"\ntimeSeriesAnswer: ${timeSeriesAnswer} (for $imgNum images)\n")
 
                   val rdd1 = catalog
                     .query[SpaceTimeKey, Tile, TileLayerMetadata[SpaceTimeKey]](layerId)
@@ -232,6 +249,8 @@ class Router(readerSet: ReaderSet, sc: SparkContext) extends Directives with Akk
                     .where(Intersects(extent))
                     .result
                   val answer1 = ContextRDD(rdd1.mapValues({ v => (v) }), rdd1.metadata).polygonalMean(geometry)
+
+                  println(s"\nAnswer1: ${answer1}")
 
                   val answer2: Double = otherTime match {
                     case None => 0.0
@@ -245,11 +264,10 @@ class Router(readerSet: ReaderSet, sc: SparkContext) extends Directives with Akk
                       ContextRDD(rdd2.mapValues({ v => fn(v) }), rdd2.metadata).polygonalMean(geometry)
                   }
 
+                  println(s"\nAnswer2: ${answer2}")
+
                   val answer = answer1 - answer2
 
-                  println(s"\ntimeSeriesAnswer: ${timeSeriesAnswer} (for $imgNum images)")
-                  println(s"\nAnswer1: ${answer1}")
-                  println(s"\nAnswer2: ${answer2}")
                   println(s"\nAnswer: ${answer}")
 
                   JsObject("answer" -> JsNumber(answer))
@@ -308,7 +326,7 @@ class Router(readerSet: ReaderSet, sc: SparkContext) extends Directives with Akk
                   val re = RasterExtent(mt(k), tile.cols, tile.rows)
                   val (tileCol, tileRow) = re.mapToGrid(point)
                   val ret = tile.getDouble(tileCol, tileRow)
-                  println(s"$point equals $ret at ($tileCol, $tileRow) in tile $re ")
+                  println(s"\n$point equals $ret at ($tileCol, $tileRow) in tile $re ")
                   (k.time, ret)
                 }
                 .collect
@@ -335,6 +353,8 @@ class Router(readerSet: ReaderSet, sc: SparkContext) extends Directives with Akk
         cors() {
           complete {
             Future {
+              println("\nIn readallRoute... (GET)\n")
+
               val catalog = readerSet.layerReader
               val ccatalog = readerSet.layerCReader
               val id = LayerId(layer, zoom)

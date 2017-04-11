@@ -111,6 +111,14 @@ var SingleLayer = React.createClass({
             onChange={e => this.handleTimeSelect(e, layer)}>
           {layerTimes}
         </Input>
+        
+        <Input type="select" label="Time Series" placeholder="select" value={this.state.timeId}
+            onChange={e => this.handleTimeSelect(e, layer)}>
+          {layerTimes}
+
+				          
+          
+        </Input>
 
         <Input type="select"
                label="Operation"
