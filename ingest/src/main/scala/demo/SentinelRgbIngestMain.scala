@@ -48,7 +48,7 @@ object SentinelRgbIngestMain extends App {
       .set("spark.kryo.registrator", "geotrellis.spark.io.kryo.KryoRegistrator")
   implicit val sc = new SparkContext(conf)
 
-  val source = sc.hadoopTemporalMultibandGeoTiffRDD("/home/kkaralas/Documents/geotrellis-sentinel-demo/data/rgb.tif")
+  val source = sc.hadoopTemporalMultibandGeoTiffRDD("/home/kkaralas/Documents/data/rgb.tif")
 
   val layoutScheme = ZoomedLayoutScheme(WebMercator)
 

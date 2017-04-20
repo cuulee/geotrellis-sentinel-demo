@@ -64,10 +64,9 @@ ${INGEST_ASSEMBLY}
 
 local-rgb-ingest: ${INGEST_ASSEMBLY}
 	spark-submit --class demo.SentinelRgbIngestMain --name "${NAME} Ingest" --master spark://master:8088 --driver-memory 12G \
-	--driver-cores 1 \
+	--driver-cores 2 \
 	--executor-memory 9g \
 	--executor-cores 2 \
-	--conf "spark.sql.shuffle.partitions=4096" \
 	--conf spark.yarn.executor.memoryOverhead=1g \
 	--conf spark.yarn.driver.memoryOverhead=1g \
 	--conf spark.network.timeout=480s \

@@ -41,7 +41,7 @@ object SentinelIngestMain extends App {
   // Setup Spark to use Kryo serializer
   val conf =
     new SparkConf()
-      .setMaster("local[*]")
+      .setMaster("spark://master:8088")
       .setAppName("Spark Ingest")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryo.registrator", "geotrellis.spark.io.kryo.KryoRegistrator")
