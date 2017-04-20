@@ -49,10 +49,37 @@ clean:
 	rm -rf viewer/site.tgz
 	rm -rf viewer/dist/*
 
-local-ingest: ${INGEST_ASSEMBLY}
-	spark-submit --class demo.SentinelIngestMain --name "${NAME} Ingest" --master "local[4]" --driver-memory 10G \
+local-rgb-compose: ${INGEST_ASSEMBLY}
+	spark-submit --class demo.RgbCompose --name "${NAME} Ingest" --master "local[4]" --driver-memory 12G \
 	--driver-cores 1 \
-	--executor-memory 8g \
+	--executor-memory 11g \
+	--executor-cores 1 \
+	--conf spark.yarn.executor.memoryOverhead=1g \
+	--conf spark.yarn.driver.memoryOverhead=1g \
+	--conf spark.network.timeout=480s \
+	--conf spark.driver.maxResultSize=5g \
+	--conf spark.driver.extraJavaOptions="-XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=70 -XX:MaxHeapFreeRatio=70" \
+	--driver-java-options "-XX:+UseCompressedOops -XX:MaxPermSize=2g -d64 -Xms1g" \
+${INGEST_ASSEMBLY}
+
+local-rgb-ingest: ${INGEST_ASSEMBLY}
+	spark-submit --class demo.SentinelRgbIngestMain --name "${NAME} Ingest" --master spark://master:8088 --driver-memory 12G \
+	--driver-cores 1 \
+	--executor-memory 9g \
+	--executor-cores 2 \
+	--conf "spark.sql.shuffle.partitions=4096" \
+	--conf spark.yarn.executor.memoryOverhead=1g \
+	--conf spark.yarn.driver.memoryOverhead=1g \
+	--conf spark.network.timeout=480s \
+	--conf spark.driver.maxResultSize=5g \
+	--conf spark.driver.extraJavaOptions="-XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=70 -XX:MaxHeapFreeRatio=70" \
+	--driver-java-options "-XX:+UseCompressedOops -XX:MaxPermSize=2g -d64 -Xms1g" \
+${INGEST_ASSEMBLY}
+
+local-ingest: ${INGEST_ASSEMBLY}
+	spark-submit --class demo.SentinelIngestMain --name "${NAME} Ingest" --master "local[4]" --driver-memory 12G \
+	--driver-cores 1 \
+	--executor-memory 11g \
 	--executor-cores 1 \
 	--conf spark.yarn.executor.memoryOverhead=1g \
 	--conf spark.yarn.driver.memoryOverhead=1g \
@@ -66,9 +93,9 @@ ${INGEST_ASSEMBLY} \
 --output "file://${PWD}/conf/output-local.json"
 
 local-update: ${INGEST_ASSEMBLY}
-	spark-submit --class demo.SentinelUpdateMain --name "${NAME} Ingest" --master "local[4]" --driver-memory 10G \
+	spark-submit --class demo.SentinelUpdateMain --name "${NAME} Ingest" --master "local[4]" --driver-memory 12G \
 	--driver-cores 1 \
-	--executor-memory 8g \
+	--executor-memory 11g \
 	--executor-cores 1 \
 	--conf spark.yarn.executor.memoryOverhead=1g \
 	--conf spark.yarn.driver.memoryOverhead=1g \
@@ -82,7 +109,7 @@ local-tile-server: CATALOG=catalog
 local-tile-server: ZOOS=localhost
 local-tile-server: MASTER=localhost
 local-tile-server: ${SERVER_ASSEMBLY}
-	spark-submit --name "${NAME} Service" --master "local" --driver-memory 1G \
+	spark-submit --name "${NAME} Service" --master spark://master:8088 --driver-memory 1G \
 ${SERVER_ASSEMBLY} cassandra ${ZOOS} ${MASTER}
 
 define UPSERT_BODY

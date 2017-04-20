@@ -12,25 +12,25 @@ object RgbCompose {
   val output = "data/rgb.tif"
 
   //constants to differentiate which bands to use
-  val R_BAND = "00"
-  val G_BAND = "01"
-  val B_BAND = "02"
+  val R_BAND = "B04"
+  val G_BAND = "B03"
+  val B_BAND = "B02"
 
   // Path to sentinel band geotiffs
-  def bandPath(b: String) = s"/home/kkaralas/Documents/shared/data/geotiffs/S2A_USER_MSI_L2A_TL_MPS__20160802T132315_A005810_T34TEL_B${b}_10m.tif"
+  def bandPath(b: String) = s"/home/kkaralas/Documents/shared/data/geotiffs/S2A_USER_MSI_L2A_TL_MPS__20160802T132315_A005810_T34TEL_${b}_10m.tif"
 
   def main(args: Array[String]): Unit = {
     // Read in the red band
     println("Reading in the red band...")
-    val rGeoTiff = SinglebandGeoTiff(bandPath("B4"))
+    val rGeoTiff = SinglebandGeoTiff(bandPath(R_BAND))
 
     // Read in the green band
-    println("Reading in green band...")
-    val gGeoTiff = SinglebandGeoTiff(bandPath("B3"))
+    println("Reading in the green band...")
+    val gGeoTiff = SinglebandGeoTiff(bandPath(G_BAND))
 
     // Read in the blue band
     println("Reading in the blue band...")
-    val bGeoTiff = SinglebandGeoTiff(bandPath("B2"))
+    val bGeoTiff = SinglebandGeoTiff(bandPath(B_BAND))
 
     // GeoTiffs have more information we need; just grab the Tile out of them.
     val (rTile, gTile, bTile) = (rGeoTiff.tile, gGeoTiff.tile, bGeoTiff.tile)
