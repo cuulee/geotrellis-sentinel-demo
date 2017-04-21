@@ -1,5 +1,7 @@
 package demo
 
+import java.io.File
+
 import geotrellis.proj4._
 import geotrellis.proj4.WebMercator
 import geotrellis.raster._
@@ -7,6 +9,7 @@ import geotrellis.raster.resample._
 import geotrellis.vector.io._
 import geotrellis.spark._
 import geotrellis.spark.io._
+import geotrellis.spark.io.file._
 import geotrellis.spark.io.index._
 import geotrellis.spark.io.hadoop._
 import geotrellis.spark.io.cassandra._
@@ -42,13 +45,14 @@ object SentinelRgbIngestMain extends App {
   // Setup Spark to use Kryo serializer
   val conf =
     new SparkConf()
-      .setMaster("local[*]")
-      .setAppName("Spark Ingest")
+      .setMaster("spark://master:8088")
+      .setAppName("Spark RGB Cluster Ingest")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryo.registrator", "geotrellis.spark.io.kryo.KryoRegistrator")
   implicit val sc = new SparkContext(conf)
 
-  val source = sc.hadoopTemporalMultibandGeoTiffRDD("/home/kkaralas/Documents/data/rgb.tif")
+  val inputPath = "file://" + new File("home/kkaralas/Documents/geotrellis-sentinel-demo/rgb.tif").getAbsolutePath
+  val source = sc.hadoopTemporalMultibandGeoTiffRDD(inputPath)
 
   val layoutScheme = ZoomedLayoutScheme(WebMercator)
 
