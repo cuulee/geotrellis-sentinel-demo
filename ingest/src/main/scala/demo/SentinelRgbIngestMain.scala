@@ -30,7 +30,7 @@ object SentinelRgbIngestMain extends App {
   val instance: CassandraInstance = new CassandraInstance {
     override val username = "cassandra"
     override val password = "cassandra"
-    override val hosts = Seq("localhost")
+    override val hosts = Seq("172.16.3.123", "172.16.3.135", "172.16.3.114")
     override val localDc = "datacenter1"
     override val replicationStrategy = "SimpleStrategy"
     override val allowRemoteDCsForLocalConsistencyLevel = false
@@ -51,7 +51,8 @@ object SentinelRgbIngestMain extends App {
       .set("spark.kryo.registrator", "geotrellis.spark.io.kryo.KryoRegistrator")
   implicit val sc = new SparkContext(conf)
 
-  val inputPath = "file://" + new File("home/kkaralas/Documents/geotrellis-sentinel-demo/rgb.tif").getAbsolutePath
+  val inputPath = "file://" + new File("data/rgb.tif").getAbsolutePath
+  println(s"\ninputPath: $inputPath")
   val source = sc.hadoopTemporalMultibandGeoTiffRDD(inputPath)
 
   val layoutScheme = ZoomedLayoutScheme(WebMercator)
