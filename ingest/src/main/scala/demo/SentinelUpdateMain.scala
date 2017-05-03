@@ -77,16 +77,15 @@ object SentinelUpdateMain extends App {
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryo.registrator", "geotrellis.spark.io.kryo.KryoRegistrator")
 
-  println("\nSentinelUpdateMain\n")
+  println("\nSentinelUpdateMain yo\n")
 
   //val files = getListOfFiles("/home/kkaralas/Documents/shared/data/test2")
-  //val fs = FileSystem.get(new Configuration());
-  //val files = fs.listStatus(new Path("hdfs://72.16.3.123:9000/ndvi_rem"));
+  //val configuration = new Configuration();
+  //val files = FileSystem.get(new URI("hdfs://172.16.3.123:9000/ndvi_rem"), configuration);
 
-  //val configuration = new Configuration()
-  //val fs = FileSystem.get(new URI("hdfs://72.16.3.123:9000/ndvi_rem/S2A_USER_MTD_SAFL2A_PDMC_20160514T180249_R093_V20160514T092034_20160514T092928_NDVI.tif"), configuration)
-  //val files = fs.listStatus(new Path("hdfs://72.16.3.123:9000/ndvi_rem/S2A_USER_MTD_SAFL2A_PDMC_20160514T180249_R093_V20160514T092034_20160514T092928_NDVI.tif"))
-
+  val hadoopconf = new Configuration()
+  val hadoopfs = FileSystem.get(new URI("hdfs://172.16.3.123:9000/"), hadoopconf)
+  val hadoopfiles = hadoopfs.listStatus(new Path("/ndvi_rem"))
 
   implicit val sc = new SparkContext(conf)
 
@@ -99,11 +98,11 @@ object SentinelUpdateMain extends App {
   // We'll be tiling the images using a zoomed layout scheme in the web mercator format
   val layoutScheme = ZoomedLayoutScheme(WebMercator, tileSize = 256)
 
-  //files.foreach { file =>
-    //println(s"\nUpdating layer with image: ${file.getPath.toString()} ...\n")
+  hadoopfiles.foreach { file =>
+    println(s"\nUpdating layer with image: ${file.getPath} ...\n")
 
-    //val source = sc.hadoopTemporalGeoTiffRDD(file.getPath.toString())
-    val source = sc.hadoopTemporalGeoTiffRDD("hdfs://172.16.3.123:9000/ndvi_rem/S2A_USER_MTD_SAFL2A_PDMC_20160514T180249_R093_V20160514T092034_20160514T092928_NDVI.tif")
+    val source = sc.hadoopTemporalGeoTiffRDD(file.getPath)
+    //val source = sc.hadoopTemporalGeoTiffRDD("hdfs://172.16.3.123:9000/ndvi_rem/S2A_USER_MTD_SAFL2A_PDMC_20160514T180249_R093_V20160514T092034_20160514T092928_NDVI.tif")
     val (_, md) = TileLayerMetadata.fromRdd[TemporalProjectedExtent, Tile, SpaceTimeKey](source, FloatingLayoutScheme(256))
 
     // Keep the same number of partitions after tiling
@@ -145,7 +144,7 @@ object SentinelUpdateMain extends App {
       }
     }
 
-  //}
+  }
 
   sc.stop()
 }
