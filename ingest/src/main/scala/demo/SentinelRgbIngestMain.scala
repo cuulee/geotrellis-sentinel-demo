@@ -22,6 +22,13 @@ import org.joda.time.DateTime
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+
+import org.apache.commons.io.IOUtils;
+
+
 /**
   * Created by kkaralas on 4/13/17.
   */
@@ -30,8 +37,8 @@ object SentinelRgbIngestMain extends App {
   val instance: CassandraInstance = new CassandraInstance {
     override val username = "cassandra"
     override val password = "cassandra"
-    override val hosts = Seq("172.16.3.123", "172.16.3.135", "172.16.3.114")
-    override val localDc = "datacenter1"
+    override val hosts = Seq("172.16.3.123", "172.16.3.135")
+    override val localDc = "testdc"
     override val replicationStrategy = "SimpleStrategy"
     override val allowRemoteDCsForLocalConsistencyLevel = false
     override val usedHostsPerRemoteDc = 0
@@ -45,13 +52,14 @@ object SentinelRgbIngestMain extends App {
   // Setup Spark to use Kryo serializer
   val conf =
     new SparkConf()
-      .setMaster("spark://master:8088")
+      .setMaster("spark://172.16.3.123:7077")
       .setAppName("Spark RGB Cluster Ingest")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryo.registrator", "geotrellis.spark.io.kryo.KryoRegistrator")
   implicit val sc = new SparkContext(conf)
 
-  val inputPath = "file://" + new File("data/rgb.tif").getAbsolutePath
+  //val inputPath = "file://" + new File("data/rgb.tif").getAbsolutePath
+  val inputPath = "hdfs://172.16.3.123:9000/geotrellis"
   println(s"\ninputPath: $inputPath")
   val source = sc.hadoopTemporalMultibandGeoTiffRDD(inputPath)
 

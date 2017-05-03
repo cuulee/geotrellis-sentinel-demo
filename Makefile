@@ -50,9 +50,9 @@ clean:
 	rm -rf viewer/dist/*
 
 local-rgb-compose: ${INGEST_ASSEMBLY}
-	spark-submit --class demo.RgbCompose --name "${NAME} Ingest" --master "local[4]" --driver-memory 12G \
+	spark-submit --class demo.RgbCompose --name "${NAME} Ingest" --master spark://172.16.3.123:7077 --driver-memory 10G \
 	--driver-cores 1 \
-	--executor-memory 11g \
+	--executor-memory 9g \
 	--executor-cores 1 \
 	--conf spark.yarn.executor.memoryOverhead=1g \
 	--conf spark.yarn.driver.memoryOverhead=1g \
@@ -63,7 +63,7 @@ local-rgb-compose: ${INGEST_ASSEMBLY}
 ${INGEST_ASSEMBLY}
 
 local-rgb-ingest: ${INGEST_ASSEMBLY}
-	spark-submit --class demo.SentinelRgbIngestMain --name "${NAME} Ingest" --master spark://master:8088 --driver-memory 12G \
+	spark-submit --class demo.SentinelRgbIngestMain --name "${NAME} Ingest" --master spark://172.16.3.123:7077 --driver-memory 12G \
 	--driver-cores 2 \
 	--executor-memory 9g \
 	--executor-cores 2 \
@@ -76,9 +76,9 @@ local-rgb-ingest: ${INGEST_ASSEMBLY}
 ${INGEST_ASSEMBLY}
 
 local-ingest: ${INGEST_ASSEMBLY}
-	spark-submit --class demo.SentinelIngestMain --name "${NAME} Ingest" --master "local[4]" --driver-memory 12G \
+	spark-submit --class demo.SentinelIngestMain --name "${NAME} Ingest" --master spark://172.16.3.123:7077 --driver-memory 10G \
 	--driver-cores 1 \
-	--executor-memory 11g \
+	--executor-memory 9g \
 	--executor-cores 1 \
 	--conf spark.yarn.executor.memoryOverhead=1g \
 	--conf spark.yarn.driver.memoryOverhead=1g \
@@ -92,9 +92,9 @@ ${INGEST_ASSEMBLY} \
 --output "file://${PWD}/conf/output-local.json"
 
 local-update: ${INGEST_ASSEMBLY}
-	spark-submit --class demo.SentinelUpdateMain --name "${NAME} Ingest" --master "local[4]" --driver-memory 12G \
+	spark-submit --class demo.SentinelUpdateMain --name "${NAME} Ingest" --master spark://172.16.3.123:7077 --driver-memory 10G \
 	--driver-cores 1 \
-	--executor-memory 11g \
+	--executor-memory 9g \
 	--executor-cores 1 \
 	--conf spark.yarn.executor.memoryOverhead=1g \
 	--conf spark.yarn.driver.memoryOverhead=1g \
@@ -105,10 +105,10 @@ local-update: ${INGEST_ASSEMBLY}
 ${INGEST_ASSEMBLY}
 
 local-tile-server: CATALOG=catalog
-local-tile-server: ZOOS=localhost
-local-tile-server: MASTER=localhost
+local-tile-server: ZOOS=172.16.3.123
+local-tile-server: MASTER=172.16.3.123
 local-tile-server: ${SERVER_ASSEMBLY}
-	spark-submit --name "${NAME} Service" --master spark://master:8088 --driver-memory 1G \
+	spark-submit --name "${NAME} Service" --master spark://172.16.3.123:7077 --driver-memory 1G \
 ${SERVER_ASSEMBLY} cassandra ${ZOOS} ${MASTER}
 
 define UPSERT_BODY

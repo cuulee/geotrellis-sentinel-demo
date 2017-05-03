@@ -1,6 +1,8 @@
 package demo
 
 import java.io.File
+import java.net.URI
+
 import geotrellis.proj4._
 import geotrellis.proj4.WebMercator
 import geotrellis.raster._
@@ -15,11 +17,21 @@ import geotrellis.spark.io.file.{FileAttributeStore, FileLayerUpdater, FileLayer
 import geotrellis.spark.pyramid._
 import geotrellis.spark.tiling._
 import geotrellis.vector.Extent
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.joda.time.DateTime
 import spray.json._
 import spray.json.DefaultJsonProtocol._
+
+
+import org.apache.hadoop.fs._
+import org.apache.spark.deploy.SparkHadoopUtil
+import java.net.URI
+
+
+
 
 
 
@@ -38,13 +50,15 @@ object SentinelUpdateMain extends App {
     }
   }
 
+
+
   def fullPath(path: String) = new java.io.File(path).getAbsolutePath
 
   val instance: CassandraInstance = new CassandraInstance {
     override val username = "cassandra"
     override val password = "cassandra"
-    override val hosts = Seq("localhost")
-    override val localDc = "datacenter1"
+    override val hosts = Seq("172.16.3.123", "172.16.3.135")
+    override val localDc = "testdc"
     override val replicationStrategy = "SimpleStrategy"
     override val allowRemoteDCsForLocalConsistencyLevel = false
     override val usedHostsPerRemoteDc = 0
@@ -58,16 +72,25 @@ object SentinelUpdateMain extends App {
   // Setup Spark to use Kryo serializer
   val conf =
     new SparkConf()
-      .setMaster("local[*]")
+      .setMaster("spark://172.16.3.123:7077")
       .setAppName("Spark Update")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryo.registrator", "geotrellis.spark.io.kryo.KryoRegistrator")
 
   println("\nSentinelUpdateMain\n")
 
-  val files = getListOfFiles("/home/kkaralas/Documents/shared/data/test2")
+  //val files = getListOfFiles("/home/kkaralas/Documents/shared/data/test2")
+  //val fs = FileSystem.get(new Configuration());
+  //val files = fs.listStatus(new Path("hdfs://72.16.3.123:9000/ndvi_rem"));
+
+  //val configuration = new Configuration()
+  //val fs = FileSystem.get(new URI("hdfs://72.16.3.123:9000/ndvi_rem/S2A_USER_MTD_SAFL2A_PDMC_20160514T180249_R093_V20160514T092034_20160514T092928_NDVI.tif"), configuration)
+  //val files = fs.listStatus(new Path("hdfs://72.16.3.123:9000/ndvi_rem/S2A_USER_MTD_SAFL2A_PDMC_20160514T180249_R093_V20160514T092034_20160514T092928_NDVI.tif"))
+
 
   implicit val sc = new SparkContext(conf)
+
+  //val files = FileSystem.get(sc.hadoopConfiguration).listStatus(new Path("hdfs://72.16.3.123:9000/ndvi_rem"))
 
   // Use the same Cassandra instance used for the first ingest
   val attributeStore = CassandraAttributeStore(instance)
@@ -76,10 +99,11 @@ object SentinelUpdateMain extends App {
   // We'll be tiling the images using a zoomed layout scheme in the web mercator format
   val layoutScheme = ZoomedLayoutScheme(WebMercator, tileSize = 256)
 
-  files.foreach { file =>
-    println(s"\nUpdating layer with image: ${file.toString} ...\n")
+  //files.foreach { file =>
+    //println(s"\nUpdating layer with image: ${file.getPath.toString()} ...\n")
 
-    val source = sc.hadoopTemporalGeoTiffRDD(file.toString)
+    //val source = sc.hadoopTemporalGeoTiffRDD(file.getPath.toString())
+    val source = sc.hadoopTemporalGeoTiffRDD("hdfs://172.16.3.123:9000/ndvi_rem/S2A_USER_MTD_SAFL2A_PDMC_20160514T180249_R093_V20160514T092034_20160514T092928_NDVI.tif")
     val (_, md) = TileLayerMetadata.fromRdd[TemporalProjectedExtent, Tile, SpaceTimeKey](source, FloatingLayoutScheme(256))
 
     // Keep the same number of partitions after tiling
@@ -121,7 +145,7 @@ object SentinelUpdateMain extends App {
       }
     }
 
-  }
+  //}
 
   sc.stop()
 }

@@ -26,8 +26,8 @@ object SentinelIngestMain extends App {
   val instance: CassandraInstance = new CassandraInstance {
     override val username = "cassandra"
     override val password = "cassandra"
-    override val hosts = Seq("localhost")
-    override val localDc = "datacenter1"
+    override val hosts = Seq("172.16.3.123", "172.16.3.135")
+    override val localDc = "testdc"
     override val replicationStrategy = "SimpleStrategy"
     override val allowRemoteDCsForLocalConsistencyLevel = false
     override val usedHostsPerRemoteDc = 0
@@ -41,14 +41,14 @@ object SentinelIngestMain extends App {
   // Setup Spark to use Kryo serializer
   val conf =
     new SparkConf()
-      .setMaster("local[*]")
+      .setMaster("spark://172.16.3.123:7077")
       .setAppName("Spark Ingest")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryo.registrator", "geotrellis.spark.io.kryo.KryoRegistrator")
   implicit val sc = new SparkContext(conf)
 
-  val source = sc.hadoopTemporalGeoTiffRDD("/home/kkaralas/Documents/shared/data/t34tel/S2A_MSIL2A_20161210T092402_N0204_R093_T34TEL_20161210T092356_NDVI.tif")
-  val sources = sc.hadoopTemporalGeoTiffRDD("/home/kkaralas/Documents/shared/data/t34tel/")
+  val source = sc.hadoopTemporalGeoTiffRDD("hdfs://172.16.3.123:9000/ndvi/S2A_USER_MTD_SAFL2A_PDMC_20160406T143016_R093_V20160404T092409_20160404T092409_NDVI.tif")
+  val sources = sc.hadoopTemporalGeoTiffRDD("hdfs://172.16.3.123:9000/ndvi_rem")
 
   val layoutScheme = ZoomedLayoutScheme(WebMercator)
 

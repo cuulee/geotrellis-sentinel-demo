@@ -9,7 +9,7 @@ import com.typesafe.config.ConfigFactory
   * Created by kkaralas on 4/11/17.
   */
 object RgbCompose {
-  val output = "data/rgb.tif"
+  val output = "data/S2A_USER_MSI_L2A_TL_SGS__20160404T132741_A004094_T34SFJ_10m.tif"
 
   //constants to differentiate which bands to use
   val R_BAND = "B04"
@@ -17,7 +17,7 @@ object RgbCompose {
   val B_BAND = "B02"
 
   // Path to sentinel band geotiffs
-  def bandPath(b: String) = s"/home/kkaralas/Documents/shared/data/geotiffs/S2A_USER_MSI_L2A_TL_MPS__20160802T132315_A005810_T34TEL_${b}_10m.tif"
+  def bandPath(b: String) = s"/home/kkaralas/Documents/shared/rgb/ini/S2A_USER_PRD_MSIL2A_PDMC_20160406T143016_R093_V20160404T092409_20160404T092409.SAFE/GRANULE/S2A_USER_MSI_L2A_TL_SGS__20160404T132741_A004094_T34SFJ_N02.01/IMG_DATA/R10m/S2A_USER_MSI_L2A_TL_SGS__20160404T132741_A004094_T34SFJ_${b}_10m.tif"
 
   def main(args: Array[String]): Unit = {
     // Read in the red band

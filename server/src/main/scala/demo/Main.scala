@@ -29,20 +29,19 @@ object Main {
 
     val conf: SparkConf =
       new SparkConf()
-        .setIfMissing("spark.master", "local[*]")
+        .setIfMissing("spark.master", "spark://172.16.3.123:7077")
         .setAppName("Demo Server")
         .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
         .set("spark.kryo.registrator", "geotrellis.spark.io.kryo.KryoRegistrator")
 
     implicit val sc = new SparkContext(conf)
-
+    //val localCatalog = args(1)
+    //new FileReaderSet(localCatalog)
     val readerSet = {
-      //val localCatalog = args(1)
-      //new FileReaderSet(localCatalog)
-
       val zooKeeper = args(1).split(",")
       val master = args(2)
-      val instance = BaseCassandraInstance(zooKeeper, master)
+      val instance = BaseCassandraInstance(Seq("172.16.3.123", "172.16.3.135"),
+        "cassandra", "cassandra", "SimpleStrategy", 1, "testdc", 0, false)
 
       new CassandraReaderSet(instance)
      }
